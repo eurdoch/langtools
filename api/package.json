@@ -1,8 +1,7 @@
 {
   "name": "langpub-api",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "main": "index.js",
-  "repository": "git@github.com:eurdoch/langpub.git",
   "author": "George Balch <gbalch714@gmail.com>",
   "license": "MIT",
   "type": "module",

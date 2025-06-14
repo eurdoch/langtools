@@ -1,6 +1,6 @@
 {
   "name": "langpub-web-extension",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "LangPub Chrome extension for language learning",
   "main": "background.js",
   "scripts": {
