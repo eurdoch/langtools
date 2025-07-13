@@ -67,6 +67,9 @@ document.addEventListener('mouseup', function(e) {
         });
       }
       
+      // Show loading modal first
+      showTranslationModal(selectedText, 'Translating...', true);
+      
       // Send message to background script to handle translation
       safeSendMessage({
         action: 'translate',
@@ -93,7 +96,7 @@ document.addEventListener('mouseup', function(e) {
 });
 
 // Function to show translation modal
-function showTranslationModal(originalText, translatedText) {
+function showTranslationModal(originalText, translatedText, isLoading = false) {
   // Store original text for explanations
   currentOriginalText = originalText;
   // Remove existing modal if present
@@ -136,90 +139,136 @@ function showTranslationModal(originalText, translatedText) {
           opacity: 1;
         }
       }
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
     `;
     document.head.appendChild(style);
   }
   
-  // Create clickable words from original text
-  const words = originalText.split(/(\s+)/).map((word, index) => {
-    if (word.trim().length > 0) {
-      return `<span class="langpub-clickable-word" data-word="${word.trim()}" style="
-        cursor: pointer;
-        text-decoration: underline;
-        color: #4CAF50;
-      " onmouseover="this.style.background='#e0e0e0'" onmouseout="this.style.background=''">${word}</span>`;
-    }
-    return word;
-  }).join('');
-
-  // Create modal content
-  modal.innerHTML = `
-    <div style="display: flex; justify-content: flex-end; align-items: flex-start; margin-bottom: 12px;">
-      <button id="langpub-close-modal" style="
-        background: none;
-        border: none;
-        font-size: 20px;
-        cursor: pointer;
-        color: #666;
-        padding: 0;
-        width: 24px;
-        height: 24px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      ">×</button>
-    </div>
-    <div style="margin-bottom: 8px;">
-      <div style="background: #e8f5e8; padding: 12px; border-radius: 4px; font-size: 16px;">${translatedText}</div>
-    </div>
-    <div style="margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
-      <div style="background: #f5f5f5; padding: 8px; border-radius: 4px; font-size: 14px; color: #666; flex: 1;">${words}</div>
-      <button id="langpub-speak-button" style="
-        background: #4CAF50;
-        color: white;
-        border: none;
-        padding: 8px;
-        border-radius: 4px;
-        cursor: pointer;
-        font-size: 16px;
-        width: 36px;
-        height: 36px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-      " title="Play speech">🔊</button>
-    </div>
-    <div id="langpub-word-translation" style="display: none; background: #fff3cd; padding: 8px; border-radius: 4px; font-size: 14px; border: 1px solid #ffeaa7;">
-      <div style="font-weight: bold; margin-bottom: 4px;">Word Translation:</div>
-      <div id="langpub-word-result"></div>
-      <div style="margin-top: 8px; display: flex; gap: 8px; align-items: center;">
-        <button id="langpub-explain-word" style="
-          background: #4CAF50;
-          color: white;
+  // Create content based on loading state
+  let modalContent;
+  
+  if (isLoading) {
+    modalContent = `
+      <div style="display: flex; justify-content: flex-end; align-items: flex-start; margin-bottom: 12px;">
+        <button id="langpub-close-modal" style="
+          background: none;
           border: none;
-          padding: 6px 10px;
-          border-radius: 4px;
+          font-size: 20px;
           cursor: pointer;
-          font-size: 13px;
-        ">Explain Word</button>
-        <button id="langpub-speak-word-button" style="
-          background: #4CAF50;
-          color: white;
-          border: none;
-          padding: 6px 8px;
-          border-radius: 4px;
-          cursor: pointer;
-          font-size: 14px;
-          width: 32px;
-          height: 32px;
+          color: #666;
+          padding: 0;
+          width: 24px;
+          height: 24px;
           display: flex;
           align-items: center;
           justify-content: center;
-        " title="Play word pronunciation">🔊</button>
+        ">×</button>
       </div>
-    </div>
-  `;
+      <div style="margin-bottom: 8px;">
+        <div style="background: #f0f8ff; padding: 12px; border-radius: 4px; font-size: 16px; display: flex; align-items: center; gap: 8px;">
+          <div style="
+            width: 16px;
+            height: 16px;
+            border: 2px solid #4CAF50;
+            border-top: 2px solid transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+          "></div>
+          ${translatedText}
+        </div>
+      </div>
+      <div style="margin-bottom: 8px;">
+        <div style="background: #f5f5f5; padding: 8px; border-radius: 4px; font-size: 14px; color: #666;">${originalText}</div>
+      </div>
+    `;
+  } else {
+    // Create clickable words from original text
+    const words = originalText.split(/(\s+)/).map((word, index) => {
+      if (word.trim().length > 0) {
+        const sanitizedWord = sanitizeWord(word.trim());
+        return `<span class="langpub-clickable-word" data-word="${sanitizedWord}" style="
+          cursor: pointer;
+          text-decoration: underline;
+          color: #4CAF50;
+        " onmouseover="this.style.background='#e0e0e0'" onmouseout="this.style.background=''">${word}</span>`;
+      }
+      return word;
+    }).join('');
+
+    modalContent = `
+      <div style="display: flex; justify-content: flex-end; align-items: flex-start; margin-bottom: 12px;">
+        <button id="langpub-close-modal" style="
+          background: none;
+          border: none;
+          font-size: 20px;
+          cursor: pointer;
+          color: #666;
+          padding: 0;
+          width: 24px;
+          height: 24px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        ">×</button>
+      </div>
+      <div style="margin-bottom: 8px;">
+        <div style="background: #e8f5e8; padding: 12px; border-radius: 4px; font-size: 16px;">${translatedText}</div>
+      </div>
+      <div style="margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+        <div style="background: #f5f5f5; padding: 8px; border-radius: 4px; font-size: 14px; color: #666; flex: 1;">${words}</div>
+        <button id="langpub-speak-button" style="
+          background: #4CAF50;
+          color: white;
+          border: none;
+          padding: 8px;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 16px;
+          width: 36px;
+          height: 36px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          flex-shrink: 0;
+        " title="Play speech">🔊</button>
+      </div>
+      <div id="langpub-word-translation" style="display: none; background: #fff3cd; padding: 8px; border-radius: 4px; font-size: 14px; border: 1px solid #ffeaa7;">
+        <div style="font-weight: bold; margin-bottom: 4px;">Word Translation:</div>
+        <div id="langpub-word-result"></div>
+        <div style="margin-top: 8px; display: flex; gap: 8px; align-items: center;">
+          <button id="langpub-explain-word" style="
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+          ">Explain Word</button>
+          <button id="langpub-speak-word-button" style="
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 6px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          " title="Play word pronunciation">🔊</button>
+        </div>
+      </div>
+    `;
+  }
+
+  // Create modal content
+  modal.innerHTML = modalContent;
   
   // Add modal to page
   document.body.appendChild(modal);
@@ -229,18 +278,24 @@ function showTranslationModal(originalText, translatedText) {
     modal.remove();
   });
   
-  // Add speech button functionality
-  document.getElementById('langpub-speak-button').addEventListener('click', function() {
-    playSpeech(originalText);
-  });
-  
-  // Add click handlers for words
-  modal.addEventListener('click', function(e) {
-    if (e.target.classList.contains('langpub-clickable-word')) {
-      const word = e.target.dataset.word;
-      translateWord(word);
+  // Add functionality only when not loading
+  if (!isLoading) {
+    // Add speech button functionality
+    const speakButton = document.getElementById('langpub-speak-button');
+    if (speakButton) {
+      speakButton.addEventListener('click', function() {
+        playSpeech(originalText);
+      });
     }
-  });
+    
+    // Add click handlers for words
+    modal.addEventListener('click', function(e) {
+      if (e.target.classList.contains('langpub-clickable-word')) {
+        const word = e.target.dataset.word;
+        translateWord(word);
+      }
+    });
+  }
   
 }
 
@@ -250,6 +305,12 @@ let currentOriginalText = '';
 let currentLanguage = '';
 let speechAudioUrl = null;
 let wordSpeechAudioUrl = null;
+
+// Function to sanitize word by removing punctuation from beginning and end
+function sanitizeWord(word) {
+  // Remove punctuation from start and end but preserve internal punctuation
+  return word.replace(/^[^\w\u00C0-\u017F\u0400-\u04FF]+|[^\w\u00C0-\u017F\u0400-\u04FF]+$/g, '');
+}
 
 // Function to play speech audio for word
 function playWordSpeech(word) {
@@ -386,10 +447,8 @@ function playSpeech(text) {
 // Function to translate individual words
 async function translateWord(word) {
   const wordTranslationDiv = document.getElementById('langpub-word-translation');
-  const wordResultDiv = document.getElementById('langpub-word-result');
-  const explainButton = document.getElementById('langpub-explain-word');
   
-  if (!wordTranslationDiv || !wordResultDiv) return;
+  if (!wordTranslationDiv) return;
   
   // Store current word for explanation
   currentWord = word;
@@ -397,11 +456,44 @@ async function translateWord(word) {
   // Reset word speech audio URL
   wordSpeechAudioUrl = null;
   
+  // Reset the word translation div to original structure if it was changed by chat
+  wordTranslationDiv.innerHTML = `
+    <div style="font-weight: bold; margin-bottom: 4px;">Word Translation:</div>
+    <div id="langpub-word-result"></div>
+    <div style="margin-top: 8px; display: flex; gap: 8px; align-items: center;">
+      <button id="langpub-explain-word" style="
+        background: #4CAF50;
+        color: white;
+        border: none;
+        padding: 6px 10px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 13px;
+      ">Explain Word</button>
+      <button id="langpub-speak-word-button" style="
+        background: #4CAF50;
+        color: white;
+        border: none;
+        padding: 6px 8px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      " title="Play word pronunciation">🔊</button>
+    </div>
+  `;
+  
   // Show loading state
   wordTranslationDiv.style.display = 'block';
+  const wordResultDiv = document.getElementById('langpub-word-result');
   wordResultDiv.innerHTML = 'Translating...';
   
   // Add click handler for explain button
+  const explainButton = document.getElementById('langpub-explain-word');
   if (explainButton) {
     explainButton.onclick = () => explainWord(currentWord, currentOriginalText);
   }
