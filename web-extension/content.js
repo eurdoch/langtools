@@ -193,7 +193,7 @@ function showTranslationModal(originalText, translatedText) {
     <div id="langpub-word-translation" style="display: none; background: #fff3cd; padding: 8px; border-radius: 4px; font-size: 14px; border: 1px solid #ffeaa7;">
       <div style="font-weight: bold; margin-bottom: 4px;">Word Translation:</div>
       <div id="langpub-word-result"></div>
-      <div style="margin-top: 8px;">
+      <div style="margin-top: 8px; display: flex; gap: 8px; align-items: center;">
         <button id="langpub-explain-word" style="
           background: #4CAF50;
           color: white;
@@ -203,6 +203,20 @@ function showTranslationModal(originalText, translatedText) {
           cursor: pointer;
           font-size: 13px;
         ">Explain Word</button>
+        <button id="langpub-speak-word-button" style="
+          background: #4CAF50;
+          color: white;
+          border: none;
+          padding: 6px 8px;
+          border-radius: 4px;
+          cursor: pointer;
+          font-size: 14px;
+          width: 32px;
+          height: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        " title="Play word pronunciation">🔊</button>
       </div>
     </div>
   `;
@@ -235,6 +249,73 @@ let currentWord = '';
 let currentOriginalText = '';
 let currentLanguage = '';
 let speechAudioUrl = null;
+let wordSpeechAudioUrl = null;
+
+// Function to play speech audio for word
+function playWordSpeech(word) {
+  const wordSpeechButton = document.getElementById('langpub-speak-word-button');
+  
+  if (!wordSpeechButton) return;
+  
+  // If audio is already available, play it
+  if (wordSpeechAudioUrl) {
+    const audio = new Audio(wordSpeechAudioUrl);
+    
+    // Visual feedback
+    const originalContent = wordSpeechButton.innerHTML;
+    wordSpeechButton.innerHTML = '🔊';
+    wordSpeechButton.style.background = '#45a049';
+    
+    audio.play().then(() => {
+      console.log('Word audio playing');
+    }).catch(error => {
+      console.error('Error playing word audio:', error);
+      wordSpeechButton.innerHTML = '❌';
+      setTimeout(() => {
+        wordSpeechButton.innerHTML = originalContent;
+        wordSpeechButton.style.background = '#4CAF50';
+      }, 2000);
+    });
+    
+    audio.onended = () => {
+      wordSpeechButton.innerHTML = originalContent;
+      wordSpeechButton.style.background = '#4CAF50';
+    };
+    
+    return;
+  }
+  
+  // If no audio available yet, try to synthesize it
+  if (currentLanguage && currentLanguage !== 'Unknown') {
+    wordSpeechButton.innerHTML = '⏳';
+    wordSpeechButton.style.background = '#ffa500';
+    
+    safeSendMessage({
+      action: 'synthesize_speech',
+      text: word,
+      language: currentLanguage
+    }, (response) => {
+      if (response && response.audioUrl) {
+        wordSpeechAudioUrl = response.audioUrl;
+        playWordSpeech(word); // Recursive call to play the now-available audio
+      } else {
+        console.error('Word speech synthesis failed:', response?.error || 'Unknown error');
+        wordSpeechButton.innerHTML = '❌';
+        setTimeout(() => {
+          wordSpeechButton.innerHTML = '🔊';
+          wordSpeechButton.style.background = '#4CAF50';
+        }, 2000);
+      }
+    });
+  } else {
+    console.log('No language detected, cannot synthesize word speech');
+    wordSpeechButton.innerHTML = '❌';
+    setTimeout(() => {
+      wordSpeechButton.innerHTML = '🔊';
+      wordSpeechButton.style.background = '#4CAF50';
+    }, 2000);
+  }
+}
 
 // Function to play speech audio
 function playSpeech(text) {
@@ -313,6 +394,9 @@ async function translateWord(word) {
   // Store current word for explanation
   currentWord = word;
   
+  // Reset word speech audio URL
+  wordSpeechAudioUrl = null;
+  
   // Show loading state
   wordTranslationDiv.style.display = 'block';
   wordResultDiv.innerHTML = 'Translating...';
@@ -320,6 +404,28 @@ async function translateWord(word) {
   // Add click handler for explain button
   if (explainButton) {
     explainButton.onclick = () => explainWord(currentWord, currentOriginalText);
+  }
+  
+  // Add click handler for word speech button
+  const wordSpeechButton = document.getElementById('langpub-speak-word-button');
+  if (wordSpeechButton) {
+    wordSpeechButton.onclick = () => playWordSpeech(currentWord);
+  }
+  
+  // Start speech synthesis for the word in parallel with translation
+  if (currentLanguage && currentLanguage !== 'Unknown') {
+    safeSendMessage({
+      action: 'synthesize_speech',
+      text: word,
+      language: currentLanguage
+    }, (speechResponse) => {
+      if (speechResponse && speechResponse.audioUrl) {
+        wordSpeechAudioUrl = speechResponse.audioUrl;
+        console.log('Word speech synthesis ready for:', word);
+      } else {
+        console.log('Word speech synthesis failed for:', word, speechResponse?.error || 'Unknown error');
+      }
+    });
   }
   
   // Send message to background script to translate the word
