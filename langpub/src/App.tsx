@@ -44,7 +44,8 @@ interface UserData {
 
 function App() {
   // Authentication states
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
+  // const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true)
   const [userData, setUserData] = useState<UserData | null>(null)
   const [email, setEmail] = useState<string>('')
   const [verificationCode, setVerificationCode] = useState<string>('')
@@ -93,6 +94,7 @@ function App() {
   const initialLoadRef = useRef<boolean>(true)
   
   // Check for existing authentication on app load
+  /*
   useEffect(() => {
     const checkExistingAuth = () => {
       try {
@@ -111,6 +113,7 @@ function App() {
 
     checkExistingAuth()
   }, [])
+  */
 
   // Load app state from disk when component mounts
   useEffect(() => {
@@ -796,6 +799,7 @@ function App() {
   }
 
   // Show login screen if not authenticated
+  /*
   if (!isAuthenticated) {
     return (
       <div className="container">
@@ -915,6 +919,7 @@ function App() {
       </div>
     )
   }
+  */
 
   return (
     <div className="container">
@@ -955,6 +960,7 @@ function App() {
         </div>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          {/* Commented out login/logout functionality
           {userData && (
             <Typography variant="body2" color="text.secondary">
               {userData.email}
@@ -967,6 +973,7 @@ function App() {
           >
             Logout
           </Button>
+          */}
         </div>
       </div>
       
