@@ -18,10 +18,6 @@ import DialogContentText from '@mui/material/DialogContentText'
 import DialogTitle from '@mui/material/DialogTitle'
 import FormControl from '@mui/material/FormControl'
 import InputLabel from '@mui/material/InputLabel'
-import TextField from '@mui/material/TextField'
-import Box from '@mui/material/Box'
-import Typography from '@mui/material/Typography'
-import Alert from '@mui/material/Alert'
 import { availableLanguages } from './language'
 
 // Interface for the persisted state
@@ -32,27 +28,10 @@ interface AppState {
   fontSize: number;
 }
 
-// Interface for user authentication
-interface UserData {
-  user_id: string;
-  email: string;
-  token: string;
-  premium: boolean;
-  created_at: string;
-  last_login: string;
-}
 
 function App() {
   // Authentication states
   // const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false)
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(true)
-  const [userData, setUserData] = useState<UserData | null>(null)
-  const [email, setEmail] = useState<string>('')
-  const [verificationCode, setVerificationCode] = useState<string>('')
-  const [isEmailSent, setIsEmailSent] = useState<boolean>(false)
-  const [isSendingEmail, setIsSendingEmail] = useState<boolean>(false)
-  const [isVerifying, setIsVerifying] = useState<boolean>(false)
-  const [authError, setAuthError] = useState<string | null>(null)
 
   const [selectedFile, setSelectedFile] = useState<string | null>(null)
   const [selectedText, setSelectedText] = useState<string | null>(null)
@@ -213,77 +192,8 @@ function App() {
   }
 
   // Authentication functions
-  const sendVerificationEmail = async () => {
-    if (!email.trim()) {
-      setAuthError('Please enter a valid email address')
-      return
-    }
 
-    setIsSendingEmail(true)
-    setAuthError(null)
 
-    try {
-      const response = await window.ipcRenderer.apiProxy('/verification/send', 'POST', { email })
-      
-      if (response.status === 200) {
-        setIsEmailSent(true)
-        console.log('Verification email sent successfully')
-      } else {
-        throw new Error(response.data?.error || 'Failed to send verification email')
-      }
-    } catch (error) {
-      console.error('Error sending verification email:', error)
-      setAuthError('Failed to send verification email. Please try again.')
-    } finally {
-      setIsSendingEmail(false)
-    }
-  }
-
-  const verifyCode = async () => {
-    if (!verificationCode.trim() || verificationCode.length !== 6) {
-      setAuthError('Please enter a valid 6-digit code')
-      return
-    }
-
-    setIsVerifying(true)
-    setAuthError(null)
-
-    try {
-      const response = await window.ipcRenderer.apiProxy('/verification/check', 'POST', { 
-        email, 
-        code: verificationCode 
-      })
-      
-      if (response.status === 200 && response.data) {
-        const userData = response.data as UserData
-        setUserData(userData)
-        setIsAuthenticated(true)
-        
-        // Store user data in localStorage
-        localStorage.setItem('langpub_user', JSON.stringify(userData))
-        
-        console.log('User authenticated successfully:', userData.email)
-      } else {
-        throw new Error(response.data?.error || 'Invalid verification code')
-      }
-    } catch (error) {
-      console.error('Error verifying code:', error)
-      setAuthError('Invalid or expired verification code. Please try again.')
-    } finally {
-      setIsVerifying(false)
-    }
-  }
-
-  const logout = () => {
-    setIsAuthenticated(false)
-    setUserData(null)
-    setEmail('')
-    setVerificationCode('')
-    setIsEmailSent(false)
-    setAuthError(null)
-    localStorage.removeItem('langpub_user')
-    console.log('User logged out')
-  }
   
   const translateText = async (text: string) => {
     if (!text) return
